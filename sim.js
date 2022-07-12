@@ -35,6 +35,10 @@ const queryRules = `[
  (attractedTo ?c1 ?c2) (repulsedBy ?c2 ?c1)]
 [(mutualAttraction ?c1 ?c2)
  (attractedTo ?c1 ?c2) (attractedTo ?c2 ?c1)]
+
+[(friendly ?c) [?c "trait" "friendly"]]
+[(unfriendly ?c) [?c "trait" "unfriendly"]]
+[(romantic ?c) [?c "trait" "romantic"]]
 ]`;
 
 const allCharCharRelationshipRules = [
@@ -42,6 +46,10 @@ const allCharCharRelationshipRules = [
   "onesidedFriendship", "onesidedEnmity", "mutualFriendship", "mutualEnmity",
   "attractedTo",
   "onesidedAttraction", "mutualAttraction"
+];
+
+const allCharTraitRules = [
+  "friendly", "unfriendly", "romantic"
 ];
 
 
@@ -133,7 +141,8 @@ const testCharNames = [
 
 // populated by createDB()
 // FIXME make createDB() fully referentially transparent again,
-// ie return this datastructure alongside the DB itself
+// ie return these datastructures alongside the DB itself
+const charTraits = {};
 const charCharShips = {};
 
 function getCharCharShips(c1, c2) {
@@ -146,6 +155,14 @@ function preferredShip(event) {
   if (event.tags.includes("unfriendly")) return "viewsAsEnemy";
   if (event.tags.includes("romantic") && event.tags.includes("negative")) return "onesidedAttraction";
   if (event.tags.includes("romantic") && event.tags.includes("positive")) return "mutualAttraction";
+  // TODO also increase odds of romantic events of any kind when attractedTo exists
+  return null;
+}
+
+function preferredTrait(event) {
+  if (event.tags.includes("friendly")) return "friendly";
+  if (event.tags.includes("unfriendly")) return "unfriendly";
+  if (event.tags.includes("romantic")) return "romantic";
   return null;
 }
 
@@ -158,7 +175,8 @@ function createDB() {
   for (let i = 0; i < charsToCreate; i++) {
     const transaction = [
       [':db/add', -1, 'type', 'char'],
-      [':db/add', -1, 'charName', testCharNames[i]]
+      [':db/add', -1, 'charName', testCharNames[i]],
+      [":db/add", -1, "trait", randNth(["friendly", "unfriendly", "romantic", "normal", "normal"])]
     ];
     db = datascript.db_with(db, transaction);
     allCharacterIDs.push(i+1);
@@ -188,7 +206,17 @@ function createDB() {
     //console.log(`relationship: ${source} ${charge > 0 ? 'likes' : 'dislikes'} ${target}`);
   }
 
-  // cache info about char/char relationships for faster precond checks and property generation
+  // cache info about char traits and relationships for faster precond checks and property generation
+  for (const ruleName of allCharTraitRules) {
+    const results = datascript.q(
+      `[:find ?c1 :in $ % :where (${ruleName} ?c1)]`,
+      db, queryRules
+    );
+    for (const [c1] of results) {
+      charTraits[c1] = charTraits[c1] || [];
+      charTraits[c1].push(ruleName);
+    }
+  }
   for (const ruleName of allCharCharRelationshipRules) {
     const results = datascript.q(
       `[:find ?c1 ?c2 :in $ % :where (${ruleName} ?c1 ?c2)]`,
@@ -227,9 +255,17 @@ function createDB() {
       chanceOfHappening *= consistencyWithCharRelationshipsFactor;
     }
     // is this event consistent with the actor's traits?
-    if (event.preferTrait) {
-      const traitType = event.preferTrait;
-      // TODO same logic as for ships
+    const traitType = preferredTrait(event);
+    if (traitType) {
+      const allTraits = charTraits[event.actor] || [];
+      const antiTraitType = {
+        friendly: "unfriendly",
+        unfriendly: "friendly"
+      }[traitType];
+      const hasTrait = allTraits.includes(traitType);
+      const hasAntiTrait = allTraits.includes(antiTraitType);
+      const consistencyWithCharTraitsFactor = hasAntiTrait ? 0.1 : (hasTrait ? 1.5 : 0.5);
+      chanceOfHappening *= consistencyWithCharTraitsFactor;
     }
     // is this event a Big Deal that shouldn't happen super often?
     if (event.tags.includes("major")) {

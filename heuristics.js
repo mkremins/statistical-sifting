@@ -29,10 +29,14 @@ function generatePropertiesForMatch(match, db) {
 
   // generate character-related properties
   for (const lvar1 of match.charLvars) {
-    // TODO character traits too
+    // traits
+    const c1 = match.bindings[lvar1];
+    for (const traitName of charTraits[c1] || []) {
+      properties.push(`charHasTrait_${lvar1}_${traitName}`);
+    }
+    // relationships
     for (const lvar2 of match.charLvars) {
       if (lvar1 === lvar2) continue;
-      const c1 = match.bindings[lvar1];
       const c2 = match.bindings[lvar2];
       if (c1 === c2) {
         properties.push(`sameChar_${lvar1}_${lvar2}`);
