@@ -36,20 +36,25 @@ const queryRules = `[
 [(mutualAttraction ?c1 ?c2)
  (attractedTo ?c1 ?c2) (attractedTo ?c2 ?c1)]
 
+[(childhoodFriends ?c1 ?c2)
+ [?ship "type" "cfShip"] [?ship "source" ?c1] [?ship "target" ?c2]]
+
 [(friendly ?c) [?c "trait" "friendly"]]
 [(unfriendly ?c) [?c "trait" "unfriendly"]]
 [(romantic ?c) [?c "trait" "romantic"]]
+[(secretlyFamous ?c) [?c "trait" "secretlyFamous"]]
 ]`;
 
 const allCharCharRelationshipRules = [
   "viewsAsFriend", "viewsAsEnemy",
   "onesidedFriendship", "onesidedEnmity", "mutualFriendship", "mutualEnmity",
   "attractedTo",
-  "onesidedAttraction", "mutualAttraction"
+  "onesidedAttraction", "mutualAttraction",
+  "childhoodFriends"
 ];
 
 const allCharTraitRules = [
-  "friendly", "unfriendly", "romantic"
+  "friendly", "unfriendly", "romantic", "secretlyFamous"
 ];
 
 
@@ -58,8 +63,9 @@ const allCharTraitRules = [
 const schema = {
   //exampleAttr: {':db/cardinality': ':db.cardinality/many'},
   // character traits
+  trait:  {':db/cardinality': ':db.cardinality/many'},
   //curse:  {':db/cardinality': ':db.cardinality/many'},
-  value:  {':db/cardinality': ':db.cardinality/many'},
+  //value:  {':db/cardinality': ':db.cardinality/many'},
   // other stuff
   actor:  {':db/valueType': ':db.type/ref'},
   //cause:  {':db/valueType': ':db.type/ref'},
@@ -178,6 +184,9 @@ function createDB() {
       [':db/add', -1, 'charName', testCharNames[i]],
       [":db/add", -1, "trait", randNth(["friendly", "unfriendly", "romantic", "normal", "normal"])]
     ];
+    if (i === charsToCreate - 1) {
+      transaction.push([":db/add", -1, "trait", "secretlyFamous"]);
+    }
     db = datascript.db_with(db, transaction);
     allCharacterIDs.push(i+1);
   }
@@ -205,6 +214,18 @@ function createDB() {
     db = datascript.db_with(db, transaction);
     //console.log(`relationship: ${source} ${charge > 0 ? 'likes' : 'dislikes'} ${target}`);
   }
+
+  // add a single reciprocal childhoodFriends relationship between a random character pair as well
+  const [cf1, cf2] = randNth(allCharIDPairs);
+  const childhoodFriendsTransaction = [
+    [":db/add", -1, "type", "cfShip"],
+    [":db/add", -1, "source", cf1],
+    [":db/add", -1, "target", cf2],
+    [":db/add", -2, "type", "cfShip"],
+    [":db/add", -2, "source", cf2],
+    [":db/add", -2, "target", cf1],
+  ];
+  db = datascript.db_with(db, childhoodFriendsTransaction);
 
   // cache info about char traits and relationships for faster precond checks and property generation
   for (const ruleName of allCharTraitRules) {
