@@ -70,7 +70,24 @@ const allSiftingPatterns = {
   `[?e1 "actor" ?c1] [?e1 "tag" "negative"] [?e1 "tag" "romantic"]
    [?e2 "actor" ?c1] [?e2 "tag" "negative"] [?e2 "tag" "romantic"] [(< ?e1 ?e2)]
    [?e3 "actor" ?c1] [?e3 "tag" "positive"] [?e3 "tag" "romantic"] [(< ?e2 ?e3)]
-   [?e1 "target" ?c2] [?e2 "target" ?c3] [?e3 "target" ?c4]`
+   [?e1 "target" ?c2] [?e2 "target" ?c3] [?e3 "target" ?c4]`,
+
+  revengeAlliance:
+  `[?e1 "actor" ?cRevengeTarget] [?e1 "target" ?c1] [?e1 "tag" "harms"]
+   [?e2 "actor" ?cRevengeTarget] [?e2 "target" ?c2] [?e2 "tag" "harms"] [(< ?e1 ?e2)]
+   [?e3 "actor" ?c1] [?e3 "target" ?c2] [?e3 "tag" "friendly"] [(< ?e2 ?e3)]
+   [?e4 "actor" ?c1] [?e4 "target" ?cRevengeTarget] [?e4 "tag" "unfriendly"] [(< ?e3 ?e4)]`,
+
+  statusReversal:
+  `[?e1 "actor" ?c1] [?e1 "target" ?c2] [?e1 "tag" "lowStatus"]
+   [?e2 "actor" ?c1] [?e2 "target" ?c2] [?e2 "tag" "lowStatus"] [(< ?e1 ?e2)]
+   [?e3 "actor" ?c1] [?e3 "target" ?c2] [?e3 "tag" "highStatus"] [(< ?e2 ?e3)]`,
+
+  cantCatchABreak:
+  `[?e1 "target" ?cProtag] [?e1 "tag" "harms"]
+   [?e2 "target" ?cProtag] [?e2 "tag" "harms"] [(< ?e1 ?e2)]
+   [?e3 "target" ?cProtag] [?e3 "tag" "harms"] [?e3 "tag" "major"] [(< ?e2 ?e3)]
+   [?e1 "actor" ?c1] [?e2 "actor" ?c2] [?e3 "actor" ?c3]`
 };
 
 
